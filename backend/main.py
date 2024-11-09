@@ -54,7 +54,7 @@ async def add_recipe(recipe: Recipe):
             print(step_num)
             step_response = supabase.table("steps").insert(
                 {
-                    "step_number": step_num,
+                    "step_number": step_num + 1,
                     "description": step.description,
                     "session_id": str(session_id),
                     "title": step.title
