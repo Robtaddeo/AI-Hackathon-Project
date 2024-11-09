@@ -1,17 +1,18 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from openai import OpenAI, AsyncOpenAI
 from supabase import create_client, Client
+from postgrest import APIError
+from openai import OpenAI, AsyncOpenAI
 import os
 import httpx
 from model.recipe import Recipe
-from postgrest import APIError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 supabase_url = "https://prkkhhdzeudwvopniwhr.supabase.co"
-client = AsyncOpenAI(
-    api_key = os.environ.get("OPENAI_API_KEY")
-)
-supabase_key: str = os.environ.get("SUPABASE_KEY")
+client = AsyncOpenAI(api_key = os.getenv("OPENAI_API_KEY"))
+supabase_key: str = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # async def save_steps_and_luma_links()
