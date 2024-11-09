@@ -6,6 +6,7 @@ import os
 import httpx
 from model.recipe import Recipe
 from dotenv import load_dotenv
+import uuid
 
 load_dotenv()
 
@@ -24,16 +25,17 @@ async def root():
 @app.post("/recipe")
 async def add_recipe(recipe: Recipe):
     print(recipe.steps)
+    session_id: str = uuid.uuid4()
     try:
         response = supabase.table("recipes").insert(
             {
                 "title": recipe.title,
                 "description": recipe.description,
                 "ingredients": recipe.ingredients,
-                "session_id": recipe.session_id,
+                "session_id": str(session_id),
             }
         ).execute()
-        return { "message": f"Adding recipe with session id {recipe.session_id} succeeded", "status": "SUCCESS"}
+        return { "message": str(session_id), "status": "SUCCESS"}
     except APIError as e:
         print(f"API Error occured: {e}")
         raise HTTPException(status_code=409, detail="Item already exists")

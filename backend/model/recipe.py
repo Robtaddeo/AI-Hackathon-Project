@@ -7,5 +7,4 @@ class Recipe(BaseModel):
     description: str = ""
     ingredients: List[str]
     servings: str
-    session_id: str # compulsory
     steps: List[Step]
