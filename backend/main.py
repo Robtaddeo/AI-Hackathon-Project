@@ -32,6 +32,7 @@ async def add_recipe(recipe: Recipe):
                 "title": recipe.title,
                 "description": recipe.description,
                 "ingredients": recipe.ingredients,
+                "servings": recipe.servings,
                 "session_id": str(session_id),
             }
         ).execute()

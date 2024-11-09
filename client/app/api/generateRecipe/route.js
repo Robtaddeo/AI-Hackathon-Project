@@ -32,7 +32,26 @@ export async function POST(req) {
 
     const recipeData = JSON.parse(completion.choices[0].message.content);
 
-    return NextResponse.json(recipeData, { status: 200 });
+    // Send recipe data to backend API
+    const backendUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:8080/recipe'
+      : `${process.env.ORIGIN}/recipe`;
+
+    const backendResponse = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(recipeData)
+    });
+
+    if (!backendResponse.ok) {
+      throw new Error('Failed to save recipe');
+    }
+
+    const { message: sessionId } = await backendResponse.json();
+    return NextResponse.json({ sessionId }, { status: 200 });
+
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: 'Error generating recipe', error: error.message }, { status: 500 });

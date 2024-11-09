@@ -8,3 +8,4 @@ class Recipe(BaseModel):
     ingredients: List[str]
     servings: str
     steps: List[Step]
+    servings: str

@@ -1,12 +1,10 @@
 import { Paperclip, Globe, ArrowUp, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import Link from "next/link";
 import { useState } from "react";
 
 export default function ChatInput() {
   const [searchPrompt, setSearchPrompt] = useState('')
-  const [recipe, setRecipe] = useState(null);
   const [recipes, setRecipes] = useState({ recipies: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [isRecipiesLoading, setIsRecipiesLoading] = useState(false);
@@ -14,7 +12,6 @@ export default function ChatInput() {
   const handleSubmit = async () => {
     if (!searchPrompt) return;
 
-    setRecipe(null);
     setRecipes({ recipies: [] });
 
     try {
@@ -34,8 +31,8 @@ export default function ChatInput() {
         }
 
         const data = await response.json();
-        setRecipes(data);
         setIsRecipiesLoading(false);
+        window.location.href = `/recipe?id=${data.sessionId}&step=0`;
       } else if (searchPrompt.includes('http')) {
         // Handle URL submission
         setIsLoading(true);
@@ -52,8 +49,8 @@ export default function ChatInput() {
         }
 
         const data = await response.json();
-        setRecipe(data);
         setIsLoading(false);
+        window.location.href = `/recipe?id=${data.sessionId}&step=0`;
       } else {
         // Handle text description submission
         setIsLoading(true);
@@ -70,8 +67,8 @@ export default function ChatInput() {
         }
 
         const data = await response.json();
-        setRecipe(data);
         setIsLoading(false);
+        window.location.href = `/recipe?id=${data.sessionId}&step=0`;
       }
     } catch (error) {
       console.error('Error:', error);
@@ -81,6 +78,7 @@ export default function ChatInput() {
       setIsRecipiesLoading(false);
     }
   };
+  
   const handleTitleDescriptionSubmit = async (title, description) => {
     try {
       setIsLoading(true);
@@ -97,8 +95,7 @@ export default function ChatInput() {
       }
 
       const data = await response.json();
-      console.log(data);
-      setRecipe(data);
+      window.location.href = `/recipe?id=${data.sessionId}&step=0`;
     } catch (error) {
       console.error('Error:', error);
       alert(error.message);
@@ -109,7 +106,7 @@ export default function ChatInput() {
 
   return (
     <div>
-      <div className="w-full mx-auto p-4">
+      <div className="w-full mx-auto">
       <div className="relative flex items-end w-full gap-2 rounded-xl bg-gradient-to-b from-zinc-300/30 to-zinc-300/30 p-2">
         <div className="flex gap-2">
           <input
@@ -156,7 +153,7 @@ export default function ChatInput() {
             </div>
           ) : (
             <Textarea
-              className="w-[500px] min-h-0 flex-1 resize-none border-0 bg-transparent px-3 py-1.5 placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-none"
+              className="w-full min-h-0 flex-1 resize-none border-0 bg-transparent px-3 py-1.5 placeholder:text-muted-foreground/50 focus-visible:ring-0 shadow-none"
               placeholder="Enter a link, a recipe or a picture of your fridge..."
               value={searchPrompt}
               onChange={(e) => setSearchPrompt(e.target.value)}
