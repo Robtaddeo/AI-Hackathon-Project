@@ -56,7 +56,7 @@ async def add_recipe(recipe: Recipe):
                 {
                     "step_number": step_num,
                     "description": step.description,
-                    "recipe_id": recipe_id,
+                    "session_id": str(session_id),
                     "title": step.title
                 }
             ).execute()
