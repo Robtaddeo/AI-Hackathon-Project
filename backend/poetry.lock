@@ -758,6 +758,25 @@ files = [
 ]
 
 [[package]]
+name = "lumaai"
+version = "1.1.0"
+description = "The official Python library for the lumaai API"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "lumaai-1.1.0-py3-none-any.whl", hash = "sha256:80ce2370989d81248e53bda7792c72556e4185966cb23c46965c20d50bfd2cd5"},
+    {file = "lumaai-1.1.0.tar.gz", hash = "sha256:2b192d79487b6c06b8237c41d4eddcaba844ac25fd03a3a0db74746ad0a8706a"},
+]
+
+[package.dependencies]
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.23.0,<1"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+typing-extensions = ">=4.7,<5"
+
+[[package]]
 name = "multidict"
 version = "6.1.0"
 description = "multidict implementation"
@@ -1763,4 +1782,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "8ce5e4bada0892e27b1afc99259930e15a169884eefaaa56c3b17c951c08b2a5"
+content-hash = "850bda3905f1b6747ad0bd25d90f8b45db631e46a525b9b54ef22bd8288197f1"
