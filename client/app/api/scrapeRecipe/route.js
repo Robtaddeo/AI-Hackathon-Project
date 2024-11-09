@@ -40,7 +40,7 @@ export async function POST(req) {
         },
         {
           role: "user", 
-          content: `Extract the recipe information from this HTML: ${recipeHtml}. Make sure the ingredients are detailed with quantity and unit of measure. The step titles should be short and relevant to the description of the step, and the descriptions should be detailed and specific to the step. It should all be relevant to the recipe itself`
+          content: `Extract the recipe information from this HTML: ${recipeHtml}. Make sure the ingredients are detailed with quantity and unit of measure. The step titles should be short and relevant to the description of the step, and the descriptions should be detailed and specific to the step. It should all be relevant to the recipe itself. The recipe description should be short 1-2 attractive sentences about the recipe.`
         }
       ],
       response_format: zodResponseFormat(recipeSchema, "recipe")
