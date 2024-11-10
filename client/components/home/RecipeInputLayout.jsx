@@ -24,7 +24,7 @@ export default function RecipeInputLayout() {
   return (
     <div>
       <h1 className="text-4xl font-bold text-blue-600 mb-8 flex items-center">
-         Lets make something delicious.
+         Let's make something delicious.
       </h1>
       <ChatInput />
       <div className="mt-8">
