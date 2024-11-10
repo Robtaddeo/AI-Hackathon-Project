@@ -32,7 +32,7 @@ export default function ChatInput() {
 
         const data = await response.json();
         setIsRecipiesLoading(false);
-        window.location.href = `/recipe?id=${data.sessionId}&step=0`;
+        setRecipes(data);
       } else if (searchPrompt.includes('http')) {
         // Handle URL submission
         setIsLoading(true);
@@ -202,17 +202,17 @@ export default function ChatInput() {
     {recipes.recipies.length > 0 && (
       <div className="flex flex-col gap-4 animate-in fade-in duration-500">
         <p>Here's some ideas based on what you have:</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
           {recipes.recipies.map((recipe) => (
             <button
               key={recipe.title}
               onClick={() => {
                 handleTitleDescriptionSubmit(recipe.title, recipe.description);
               }}
-              className="p-4 border rounded-lg hover:bg-slate-100 transition-colors text-left"
+              className="p-4 border rounded-lg hover:bg-slate-100 transition-colors text-left flex flex-col h-full"
             >
-              <h3 className="font-medium mb-2">{recipe.title}</h3>
-              <p className="text-sm text-gray-600">{recipe.description}</p>
+              <h3 className="font-medium mb-2 line-clamp-2">{recipe.title}</h3>
+              <p className="text-sm text-gray-600 line-clamp-3">{recipe.description}</p>
             </button>
           ))}
         </div>

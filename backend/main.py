@@ -58,6 +58,7 @@ async def add_recipe(recipe: Recipe):
                 "ingredients": recipe.ingredients,
                 "servings": recipe.servings,
                 "session_id": str(session_id),
+                "image_url": recipe.image_url
             }
         ).execute()
         recipe_id: int = response.data[0]['id']
@@ -66,10 +67,10 @@ async def add_recipe(recipe: Recipe):
             print(step_num)
             step_response = supabase.table("steps").insert(
                 {
-                    "step_number": step_num,
+                    "step_number": step_num + 1,
                     "description": step.description,
-                    "recipe_id": recipe_id,
-                    "title": step.title
+                    "session_id": str(session_id),
+                    "title": step.title,
                 }
             ).execute()
             print(step_response)
