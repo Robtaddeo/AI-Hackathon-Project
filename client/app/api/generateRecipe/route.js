@@ -40,7 +40,7 @@ export async function POST(req) {
         },
         {
           role: "user",
-          content: `Generate a detailed recipe based on this description: ${description}. Include specific quantities and measurements for ingredients. Create clear, detailed steps with relevant titles and descriptions. Make the recipe description engaging but concise.`
+          content: `Generate a comprehensive, step-by-step recipe based on this description: ${description}. Include precise quantities and measurements for each ingredient, specifying units (e.g., cups, teaspoons, grams). Break down the cooking process into distinct sections, such as "Preparation," "Cooking," and "Final Touches," with each section containing clear, numbered steps and relevant titles. Ensure each step is concise but fully detailed, guiding the reader through every action. Add notes for timing, temperature, or any special techniques, and make the recipe description engaging yet straightforward. Include any useful tips or substitutions.`
         }
       ],
       response_format: zodResponseFormat(recipeSchema, "recipe")
