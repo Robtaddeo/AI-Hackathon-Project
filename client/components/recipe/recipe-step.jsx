@@ -18,32 +18,47 @@ const supabase = createClient(
 )
 
 const fetchVideoStatus = async (sessionId, stepNum) => {
+  if (!sessionId || !stepNum) return { message: false }
+  
   const backendUrl = process.env.NODE_ENV === 'development'
     ? `http://localhost:8080/luma_status`
     : `${process.env.ORIGIN}/luma_status`;
     
-  const response = await fetch(`${backendUrl}?session_id=${sessionId}&prompt_num=${stepNum}`)
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      return { message: false }
+  try {
+    const response = await fetch(`${backendUrl}?session_id=${sessionId}&prompt_num=${stepNum}`)
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { message: false }
+      }
+      throw new Error('Failed to fetch video status')
     }
-    throw new Error('Failed to fetch video status')
+    
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching video status:', error)
+    return { message: false }
   }
-  
-  return response.json()
 }
 
 const fetchStepVideo = async (sessionId, stepNum) => {
-  const { data, error } = await supabase
-    .from('steps')
-    .select('video_url')
-    .eq('session_id', sessionId)
-    .eq('step_number', stepNum)
-    .single()
+  if (!sessionId || !stepNum) return null
+  
+  try {
+    const { data, error } = await supabase
+      .from('steps')
+      .select('video_url')
+      .eq('session_id', sessionId)
+      .eq('step_number', stepNum)
+      .single()
 
-  if (error) throw error
-  return data.video_url
+    if (error) throw error
+    return data?.video_url
+  } catch (error) {
+    console.error('Error fetching video:', error)
+    return null
+  }
 }
 
 export default function RecipeStep({ step, recipe }) {
@@ -56,8 +71,9 @@ export default function RecipeStep({ step, recipe }) {
   const { data: videoStatus, isLoading: isStatusLoading } = useQuery({
     queryKey: ['video-status', sessionId, stepNum],
     queryFn: () => fetchVideoStatus(sessionId, stepNum),
-    refetchInterval: (data) => !data?.message ? 30000 : false, // Poll every 30s until video is ready
+    refetchInterval: (data) => data?.message === false ? 5000 : false, // Poll every 5s until video is ready
     enabled: !!sessionId && !!stepNum,
+    retry: 3,
   })
 
   // Query for video URL once status is true
@@ -65,6 +81,7 @@ export default function RecipeStep({ step, recipe }) {
     queryKey: ['video-url', sessionId, stepNum],
     queryFn: () => fetchStepVideo(sessionId, stepNum),
     enabled: !!videoStatus?.message && !!sessionId && !!stepNum,
+    retry: 2,
   })
 
   const isLoading = isStatusLoading || (videoStatus?.message && isVideoLoading)
@@ -78,7 +95,7 @@ export default function RecipeStep({ step, recipe }) {
   }
 
   return (
-    <div className="flex relative">
+    <div className="flex relative bg-background">
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">

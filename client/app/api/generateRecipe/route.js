@@ -61,11 +61,11 @@ export async function POST(req) {
     recipeData.image_url = imageUrl;
 
     // Send recipe data to backend API
-    const backendUrl = process.env.NODE_ENV === 'development' 
+    const backendUrlRecipe = process.env.NODE_ENV === 'development' 
       ? 'http://localhost:8080/recipe'
       : `${process.env.ORIGIN}/recipe`;
 
-    const backendResponse = await fetch(backendUrl, {
+    const backendResponseRecipe = await fetch(backendUrlRecipe, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -73,13 +73,30 @@ export async function POST(req) {
       body: JSON.stringify(recipeData)
     });
 
-    if (!backendResponse.ok) {
+    if (!backendResponseRecipe.ok) {
       throw new Error('Failed to save recipe');
     }
 
-    const { message: sessionId } = await backendResponse.json();
-    return NextResponse.json({ sessionId }, { status: 200 });
+    const { message: sessionId } = await backendResponseRecipe.json();
 
+    // Fixed URL and request body structure for Luma endpoint
+    const lumaUrl = process.env.NODE_ENV === 'development' 
+      ? `http://localhost:8080/luma?session_id=${sessionId}`
+      : `${process.env.ORIGIN}/luma?session_id=${sessionId}`;
+
+    const backendResponseLuma = await fetch(lumaUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(recipeData)
+    });
+
+    if (!backendResponseLuma.ok) {
+      throw new Error('Failed to start luma jobs');
+    }
+
+    return NextResponse.json({ sessionId }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: 'Error generating recipe', error: error.message }, { status: 500 });
