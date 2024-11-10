@@ -3,6 +3,7 @@ from fastapi.encoders import jsonable_encoder
 from supabase import create_client, Client
 from postgrest import APIError
 from openai import OpenAI, AsyncOpenAI
+import requests
 import os
 import httpx
 from model.recipe import Recipe
@@ -21,7 +22,7 @@ load_dotenv()
 # TODO: should we add to the prompt: Try to show the end result of each step.
 # TODO: do we want final frame to match the image of the recipe.
 CHAT_BASE_PROMPT = "Create LUMA AI prompts in the following manner.\n\
-Generate a lumaai prompt for each step in the recipe as a separate video. Keep in mind that luma ai can only generate video for 5s at a time. So leave out the details of the amount of time each step needs. Each step must extend from the previous, so give each prompt some detail about the visual of last step's prompt if relevant."
+Generate a lumaai prompt for each step in the recipe as a separate video and the number of prompts must match the number of steps in the recipe. Keep in mind that luma ai can only generate video for 5s at a time. So leave out the details of the amount of time each step needs and prompt it to show the most important part of each step. All videos must be from a birds eye  view, i.e., from the top of the items being shown. Each step must extend from the previous, so give each prompt some detail about the visual of last step's prompt if relevant."
 
 app = FastAPI()
 supabase_url = "https://prkkhhdzeudwvopniwhr.supabase.co"
@@ -110,14 +111,25 @@ async def make_gpt_call(recipe: Recipe):
         response_format=Prompts
     )
     return {"message": completion.choices[0].message}
-async def make_single_luma_call(session_id: str, prompt_num: int, prompt: str):
+async def make_single_luma_call(session_id: str, prompt_num: int, prompt: str, last_frame: str = ""):
     print("received request to do stuff for ", prompt_num)
     mykey = f"{session_id}_{prompt_num}"
     tasks_status[mykey] = False
     try:
-        generation = await luma_async_client.generations.create(
-            prompt=prompt,
-        )
+        if last_frame == "":
+            generation = await luma_async_client.generations.create(
+                prompt=prompt,
+            )
+        else:
+            generation = await luma_async_client.generations.create(
+                prompt=prompt,
+                keyframes={
+                "frame1": {
+                    "type": "image",
+                    "url": last_frame
+                }
+    }
+            )
         task_to_luma_job_ids[f"{session_id}_{prompt_num}"] = generation.id
         completed = False
         # TODO : maybe extend the videos?
@@ -155,24 +167,39 @@ async def get_luma_job_status(session_id: str, prompt_num: int):
         raise  HTTPException(status_code=404, detail="No such session id has had luma jobs started yet.")
     return {"message":  tasks_status[f"{session_id}_{prompt_num}"]}
 
-async def send_luma_calls_at_once(session_id: str, luma_ai_prompts: List[str]):
+async def send_luma_calls_at_once(session_id: str, luma_ai_prompts: List[str], last_frame_url: str = None):
     tasks = []
     for prompt_num in range(1, len(luma_ai_prompts) + 1):
         luma_ai_prompt = luma_ai_prompts[prompt_num - 1]
-        tasks.append(make_single_luma_call(session_id, prompt_num, luma_ai_prompt))
+        if prompt_num == len(luma_ai_prompts) and last_frame_url:
+            tasks.append(make_single_luma_call(session_id, prompt_num, luma_ai_prompt, last_frame_url))
+        else:
+            tasks.append(make_single_luma_call(session_id, prompt_num, luma_ai_prompt))
     step_responses = await asyncio.gather(*tasks)
     print(step_responses)
         
+def check_url(url):
+    """Checks the status of a URL and returns the status code."""
 
+    try:
+        response = requests.get(url)
+        return response.status_code == 200 or response.status_code == 304
+    except requests.exceptions.RequestException as e:
+        return False
 @app.post("/luma")
 async def make_luma_calls(session_id: str, recipe: Recipe, background_tasks: BackgroundTasks):
     res_prompts = await make_gpt_call(json.dumps(jsonable_encoder(recipe)))
 
     chat_prompts: List[str] = json.loads(res_prompts["message"].content)["data"]
     luma_ai_prompts = list(map(lambda s: s.strip(), chat_prompts))
+    print(luma_ai_prompts)
     if session_id not in tasks_status:
         tasks_status[session_id] = [False] * len(luma_ai_prompts)
-    background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts)
+    last_frame_url = recipe.image_url
+    if check_url(last_frame_url):
+        background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts, last_frame_url)
+    else:
+        background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts)
     return {"message": "cooking"}
     # generation = await luma_async_client.generations.create(
     #     prompt="A teddy bear in sunglasses playing electric guitar and dancing",
