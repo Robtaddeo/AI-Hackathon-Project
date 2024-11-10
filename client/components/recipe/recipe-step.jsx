@@ -17,31 +17,6 @@ const supabase = createClient(
   supabaseKey
 )
 
-const fetchVideoStatus = async (sessionId, stepNum) => {
-  if (!sessionId || !stepNum) return { message: false }
-  
-  const backendUrl = process.env.NODE_ENV === 'development'
-    ? `http://localhost:8080/luma_status`
-    : `${process.env.ORIGIN}/luma_status`;
-    
-  try {
-    const response = await fetch(`${backendUrl}?session_id=${sessionId}&prompt_num=${stepNum}`)
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        return { message: false }
-      }
-      throw new Error('Failed to fetch video status')
-    }
-    
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching video status:', error)
-    return { message: false }
-  }
-}
-
 const fetchStepVideo = async (sessionId, stepNum) => {
   if (!sessionId || !stepNum) return null
   
@@ -67,24 +42,15 @@ export default function RecipeStep({ step, recipe }) {
   const sessionId = searchParams.get('id')
   const stepNum = parseInt(searchParams.get('step'))
 
-  // Query for video status
-  const { data: videoStatus, isLoading: isStatusLoading } = useQuery({
-    queryKey: ['video-status', sessionId, stepNum],
-    queryFn: () => fetchVideoStatus(sessionId, stepNum),
-    refetchInterval: (data) => data?.message === false ? 5000 : false, // Poll every 5s until video is ready
-    enabled: !!sessionId && !!stepNum,
-    retry: 3,
-  })
-
-  // Query for video URL once status is true
-  const { data: videoUrl, isLoading: isVideoLoading } = useQuery({
+  const { data: videoUrl, isLoading } = useQuery({
     queryKey: ['video-url', sessionId, stepNum],
     queryFn: () => fetchStepVideo(sessionId, stepNum),
-    enabled: !!videoStatus?.message && !!sessionId && !!stepNum,
-    retry: 2,
+    enabled: !!sessionId && !!stepNum && !step?.video_url,
+    refetchInterval: (data) => !data ? 5000 : false, // Poll every 5s until video exists
+    retry: 3
   })
 
-  const isLoading = isStatusLoading || (videoStatus?.message && isVideoLoading)
+  const finalVideoUrl = step?.video_url || videoUrl
   
   if (!step || !recipe) {
     return (
@@ -103,23 +69,24 @@ export default function RecipeStep({ step, recipe }) {
           </div>
 
           <div className="mb-8">
-            {isLoading || !videoStatus?.message ? (
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+            {isLoading ? (
+              <div className="aspect-video rounded-lg flex items-center justify-center">
                 <div className="text-center">
                   <Skeleton className="w-full h-full absolute inset-0" />
                   <p className="text-gray-500 relative z-10">Video is being generated...</p>
                 </div>
               </div>
-            ) : videoUrl ? (
+            ) : finalVideoUrl ? (
               <video 
-                src={videoUrl} 
+                src={finalVideoUrl} 
                 controls 
                 className="w-full aspect-video rounded-lg"
                 playsInline
+                autoPlay
               />
             ) : (
               <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                <p className="text-gray-500">Failed to load video</p>
+                <p className="text-gray-500">Video is being generated...</p>
               </div>
             )}
           </div>

@@ -137,7 +137,7 @@ export default function ChatInput() {
         </div>
         <div className="flex-1 relative">
           {searchPrompt && searchPrompt.startsWith('data:image') ? (
-            <div className="relative w-32 h-32">
+            <div className="relative w-32 h-48">
               <img 
                 src={searchPrompt} 
                 alt="Uploaded content"
@@ -174,14 +174,27 @@ export default function ChatInput() {
                 }
               }}
               onInput={(e) => {
-                const maxHeight = 200;
-                e.target.style.height = 'auto';
-                const newHeight = Math.min(e.target.scrollHeight, maxHeight);
-                e.target.style.height = newHeight + 'px';
-                e.target.style.overflowY = e.target.scrollHeight > maxHeight ? 'scroll' : 'hidden';
-                e.target.style.scrollbarWidth = 'none';
-                e.target.style.msOverflowStyle = 'none';
-                e.target.style.WebkitScrollbar = {display: 'none'};
+                const maxHeight = 400; // Reduced max height to be more reasonable
+                const textarea = e.target;
+                
+                // Reset height to auto to get proper scrollHeight
+                textarea.style.height = 'auto';
+                
+                // Set new height capped at maxHeight
+                textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px';
+                
+                // Add scrolling if content exceeds maxHeight
+                if (textarea.scrollHeight > maxHeight) {
+                  textarea.style.overflowY = 'auto';
+                  textarea.style.maxHeight = maxHeight + 'px';
+                } else {
+                  textarea.style.overflowY = 'hidden';
+                }
+
+                // Hide scrollbar
+                textarea.style.scrollbarWidth = 'none';
+                textarea.style.msOverflowStyle = 'none';
+                textarea.style['-webkit-scrollbar'] = 'none';
               }}
             />
           )}
