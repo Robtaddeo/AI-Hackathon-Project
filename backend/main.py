@@ -38,6 +38,14 @@ luma_async_client = AsyncLumaAI(
 async def root():
     return {"message": "Hello World"}
 
+async def update_step(session_id: str, step_num: int, video_url: str):
+    print("trying to update", session_id, step_num, video_url)
+    step_response = supabase.table("steps").update(
+        {
+            "video_url": video_url
+        }
+    ).eq("step_number", step_num).eq("session_id", session_id).execute()
+    return step_response
 @app.post("/recipe")
 async def add_recipe(recipe: Recipe):
     # print(recipe.steps)
@@ -100,9 +108,23 @@ async def make_gpt_call(recipe: Recipe):
     return {"message": completion.choices[0].message}
 async def make_single_luma_call(session_id: str, prompt_num: int, prompt: str):
     print("received request to do stuff for ", prompt_num)
-    await asyncio.sleep(10)
+    generation = await luma_async_client.generations.create(
+        prompt=prompt,
+    )
+    completed = False
+    while not completed:
+        generation = await luma_async_client.generations.get(id=generation.id)
+        if generation.state == "completed":
+            completed = True
+        elif generation.state == "failed":
+            raise RuntimeError(f"Generation failed: {generation.failure_reason}")
+        print("Dreaming")
+        time.sleep(3)
     print("done", prompt_num)
     tasks_status[f"{session_id}_{prompt_num}"] = True
+    video_url = generation.assets.video
+    res = await update_step(session_id, prompt_num, video_url)
+    return res
 
 @app.get("/luma_status")
 async def get_luma_job_status(session_id: str, prompt_num: int):
@@ -115,7 +137,8 @@ async def send_luma_calls_at_once(session_id: str, luma_ai_prompts: List[str]):
     for prompt_num in range(1, len(luma_ai_prompts) + 1):
         luma_ai_prompt = luma_ai_prompts[prompt_num - 1]
         tasks.append(make_single_luma_call(session_id, prompt_num, luma_ai_prompt))
-    await asyncio.gather(*tasks)
+    step_responses = await asyncio.gather(*tasks)
+    print(step_responses)
         
 
 @app.post("/luma")
