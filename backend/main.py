@@ -186,8 +186,9 @@ def check_url(url):
         return response.status_code == 200 or response.status_code == 304
     except requests.exceptions.RequestException as e:
         return False
-@app.post("/luma")
-async def make_luma_calls(session_id: str, recipe: Recipe, background_tasks: BackgroundTasks):
+
+
+async def kickoff_luma_pipeline(session_id: str, recipe: Recipe):
     res_prompts = await make_gpt_call(json.dumps(jsonable_encoder(recipe)))
 
     chat_prompts: List[str] = json.loads(res_prompts["message"].content)["data"]
@@ -197,9 +198,25 @@ async def make_luma_calls(session_id: str, recipe: Recipe, background_tasks: Bac
         tasks_status[session_id] = [False] * len(luma_ai_prompts)
     last_frame_url = recipe.image_url
     if check_url(last_frame_url):
-        background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts, last_frame_url)
+        await send_luma_calls_at_once(session_id, luma_ai_prompts, last_frame_url)
     else:
-        background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts)
+        await send_luma_calls_at_once(session_id, luma_ai_prompts)
+
+@app.post("/luma")
+async def make_luma_calls(session_id: str, recipe: Recipe, background_tasks: BackgroundTasks):
+    background_tasks.add_task(kickoff_luma_pipeline, session_id, recipe)
+    # res_prompts = await make_gpt_call(json.dumps(jsonable_encoder(recipe)))
+
+    # chat_prompts: List[str] = json.loads(res_prompts["message"].content)["data"]
+    # luma_ai_prompts = list(map(lambda s: s.strip(), chat_prompts))
+    # print(luma_ai_prompts)
+    # if session_id not in tasks_status:
+    #     tasks_status[session_id] = [False] * len(luma_ai_prompts)
+    # last_frame_url = recipe.image_url
+    # if check_url(last_frame_url):
+    #     background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts, last_frame_url)
+    # else:
+    #     background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts)
     return {"message": "cooking"}
     # generation = await luma_async_client.generations.create(
     #     prompt="A teddy bear in sunglasses playing electric guitar and dancing",
