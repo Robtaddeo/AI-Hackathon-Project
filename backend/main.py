@@ -6,6 +6,7 @@ from openai import OpenAI, AsyncOpenAI
 import os
 import httpx
 from model.recipe import Recipe
+from model.prompts import Prompts
 from dotenv import load_dotenv
 import uuid
 import os
@@ -15,11 +16,12 @@ import time
 import json
 import asyncio
 tasks_status = {}
-
+task_to_luma_job_ids = {}
 load_dotenv()
+# TODO: should we add to the prompt: Try to show the end result of each step.
+# TODO: do we want final frame to match the image of the recipe.
 CHAT_BASE_PROMPT = "Create LUMA AI prompts in the following manner.\n\
-Then generate a lumaai prompt for each step as a separate video. Each step after the first must extend from the previous.\n\
-The answer you give must be just text separated by the delimiter '|||'. The step prompts in order, each prompt separated by '|||' and no headings or other extra characters. To "
+Generate a lumaai prompt for each step in the recipe as a separate video. Keep in mind that luma ai can only generate video for 5s at a time. So leave out the details of the amount of time each step needs. Each step must extend from the previous, so give each prompt some detail about the visual of last step's prompt if relevant."
 
 app = FastAPI()
 supabase_url = "https://prkkhhdzeudwvopniwhr.supabase.co"
@@ -99,33 +101,53 @@ async def get_recipe(session_id: str):
 async def make_gpt_call(recipe: Recipe):
     # client = OpenAI()
     
-    completion = await client.chat.completions.create(
+    completion = await client.beta.chat.completions.parse(
         model="gpt-4o",
         messages=[
+            {"role": "system", "content": "Guide the Luma AI model prompt by prompt in order of the steps."},
             {"role": "user", "content": f"{CHAT_BASE_PROMPT}{recipe}" }
-        ]
+        ],
+        response_format=Prompts
     )
-    print(completion)
     return {"message": completion.choices[0].message}
 async def make_single_luma_call(session_id: str, prompt_num: int, prompt: str):
     print("received request to do stuff for ", prompt_num)
-    generation = await luma_async_client.generations.create(
-        prompt=prompt,
-    )
-    completed = False
-    while not completed:
-        generation = await luma_async_client.generations.get(id=generation.id)
-        if generation.state == "completed":
-            completed = True
-        elif generation.state == "failed":
-            raise RuntimeError(f"Generation failed: {generation.failure_reason}")
-        print("Dreaming")
-        time.sleep(3)
-    print("done", prompt_num)
-    tasks_status[f"{session_id}_{prompt_num}"] = True
-    video_url = generation.assets.video
-    res = await update_step(session_id, prompt_num, video_url)
-    return res
+    mykey = f"{session_id}_{prompt_num}"
+    tasks_status[mykey] = False
+    try:
+        generation = await luma_async_client.generations.create(
+            prompt=prompt,
+        )
+        task_to_luma_job_ids[f"{session_id}_{prompt_num}"] = generation.id
+        completed = False
+        # TODO : maybe extend the videos?
+        while not completed:
+            generation = await luma_async_client.generations.get(id=generation.id)
+            if generation.state == "completed":
+                completed = True
+            elif generation.state == "failed":
+                raise RuntimeError(f"Generation failed: {generation.failure_reason}")
+            print("Dreaming")
+            await asyncio.sleep(3)
+        print("done", prompt_num)
+        tasks_status[mykey] = True 
+        video_url = generation.assets.video
+        res = await update_step(session_id, prompt_num, video_url)
+        return res
+    except Exception as e:
+        tasks_status.pop(mykey, None)
+        raise HTTPException(status_code=500, detail=f"Error when generating luma videos{e.args[0]}")
+
+# async def get_luma_job_status(session_id: str, prompt_num: int):
+#     mykey = f"{session_id}_{prompt_num}"
+#     if mykey not in task_to_luma_job_ids:
+#         raise  HTTPException(status_code=404, detail="No such session id has had luma jobs started yet.")
+#     generation = await luma_async_client.generations.get(id=generation.id)
+#     if generation.state == "completed":
+#         return {"message": True}
+#     elif generation.state == "failed":
+#         raise RuntimeError(f"Generation failed: {generation.failure_reason}")
+#     return {"message":  False}
 
 @app.get("/luma_status")
 async def get_luma_job_status(session_id: str, prompt_num: int):
@@ -146,8 +168,8 @@ async def send_luma_calls_at_once(session_id: str, luma_ai_prompts: List[str]):
 async def make_luma_calls(session_id: str, recipe: Recipe, background_tasks: BackgroundTasks):
     res_prompts = await make_gpt_call(json.dumps(jsonable_encoder(recipe)))
 
-    chat_prompts = res_prompts["message"].content
-    luma_ai_prompts = list(map(lambda s: s.strip(), chat_prompts.split("|||")))
+    chat_prompts: List[str] = json.loads(res_prompts["message"].content)["data"]
+    luma_ai_prompts = list(map(lambda s: s.strip(), chat_prompts))
     if session_id not in tasks_status:
         tasks_status[session_id] = [False] * len(luma_ai_prompts)
     background_tasks.add_task(send_luma_calls_at_once, session_id, luma_ai_prompts)
