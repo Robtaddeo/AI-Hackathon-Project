@@ -9,3 +9,4 @@ class Recipe(BaseModel):
     servings: str
     steps: List[Step]
     servings: str
+    image_url: str

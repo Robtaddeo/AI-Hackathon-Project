@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import ChatInput from '../inputs/ChatInput'
+import Link from 'next/link'
 
-export default function RatatouilleRecipeInput() {
+export default function RecipeInputLayout() {
   const [url, setUrl] = useState('')
   const [recipe, setRecipe] = useState('')
   const [error, setError] = useState('')
@@ -26,6 +27,11 @@ export default function RatatouilleRecipeInput() {
          Lets make something delicious.
       </h1>
       <ChatInput />
+      <div className="mt-8">
+        <Link href="/recipes" className="text-sm text-gray-500 hover:text-gray-700">
+          Explore existing recipes
+        </Link>
+      </div>
     </div>
   )
 }

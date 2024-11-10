@@ -2,10 +2,26 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { zodResponseFormat } from "openai/helpers/zod";
 import { recipeSchema } from '@/types/recipe-schema';
+import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+if (!supabaseKey) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_KEY environment variable')
+}
+
+const supabase = createClient(
+  'https://prkkhhdzeudwvopniwhr.supabase.co',
+  supabaseKey,
+  {
+    auth: {
+      persistSession: false
+    }
+  }
+)
 
 export async function POST(req) {
   const { description } = await req.json();
@@ -31,6 +47,18 @@ export async function POST(req) {
     });
 
     const recipeData = JSON.parse(completion.choices[0].message.content);
+
+    // Generate recipe image
+    const imageResponse = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `A professional food photography style image of ${recipeData.title}. The image should be well-lit, showing the completed dish from an appetizing angle.`,
+      size: "1024x1024",
+      quality: "standard",
+      n: 1,
+    });
+
+    const imageUrl = imageResponse.data[0].url;
+    recipeData.image_url = imageUrl;
 
     // Send recipe data to backend API
     const backendUrl = process.env.NODE_ENV === 'development' 

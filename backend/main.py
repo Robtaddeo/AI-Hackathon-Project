@@ -46,6 +46,7 @@ async def add_recipe(recipe: Recipe):
                 "ingredients": recipe.ingredients,
                 "servings": recipe.servings,
                 "session_id": str(session_id),
+                "image_url": recipe.image_url
             }
         ).execute()
         recipe_id: int = response.data[0]['id']
@@ -57,7 +58,7 @@ async def add_recipe(recipe: Recipe):
                     "step_number": step_num + 1,
                     "description": step.description,
                     "session_id": str(session_id),
-                    "title": step.title
+                    "title": step.title,
                 }
             ).execute()
             print(step_response)

@@ -1,9 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { signout } from "./actions";
-import RatatouilleRecipeInput from "@/components/home/RecipeInputLayout";
+import RecipeInputLayout from "@/components/home/RecipeInputLayout";
 
 export default function Home() {
   return (
@@ -21,19 +19,11 @@ export default function Home() {
               Remy
             </h1>
           </div>
-          <form action="/api/auth/signout" method="POST">
-            <Button 
-              variant="ghost" 
-              className="hover:bg-gray-100 transition-colors"
-            >
-              Sign Out
-            </Button>
-          </form>
         </nav>
       </header>
       <main className="flex h-full overflow-y-auto flex-1 flex-grow flex-col items-center justify-center p-4 w-full">
         <div className="w-full max-w-7xl mx-auto">
-          <RatatouilleRecipeInput />
+          <RecipeInputLayout />
         </div>
       </main>
     </div>
